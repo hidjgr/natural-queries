@@ -1,0 +1,5 @@
+*.xls
+*.zip
+__pycache__/
+parsetab.py
+parser.out
