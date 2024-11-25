@@ -1,6 +1,58 @@
-BookID	Title	Author	Genre	PublishedYear
-1	The Catcher in the Rye	J.D. Salinger	Fiction	1951
-2	To Kill a Mockingbird	Harper Lee	Fiction	1960
-3	A Brief History of Time	Stephen Hawking	Science	1988
-4	The Great Gatsby	F. Scott Fitzgerald	Fiction	1925
-5	The Art of War	Sun Tzu	Philosophy	-500
+BookID	Title	Author	Genre	Year
+1	Start With Why	Simon Sinek	Business Strategy	2009
+2	Strategy That Works	Mainardi, Leinwand	Business Strategy	2016
+3	The Essential Advantage	Mainardi, Leinwand	Business Strategy	2010
+4	The McKinsey Way	Ethan M. Rasiel	Business Strategy	1999
+5	Your Strategy Needs a Strategy	Janmejaya Sinha	Business Strategy	2015
+6	Artificial Intelligence, A Modern Approach	Norvig, Russell	Computer Science	1995
+7	Haskell Programming, From First Principles	Allen and Julie Moronuki	Computer Science	2015
+8	Structure and Interpretation of Computer Programs	Sussman, Abelson	Computer Science	1984
+9	Hooked, A Guide to Building Habit-Forming Products	Nir Eyal	Entrepreneurship	2014
+10	The Lean Startup	Eric Ries	Entrepreneurship	2011
+11	Zero to One	Masters, Thiel	Entrepreneurship	2014
+12	1984	George Orwell	Fiction	1949
+13	Animal Farm	George Orwell	Fiction	1945
+14	Brave New World	Aldous Huxley	Fiction	1932
+15	Crash	J. G. Ballard	Fiction	1973
+16	Gardens of the Moon	Steven Erikson	Fiction	1999
+17	L'Étranger	Albert Camus	Fiction	1942
+18	To Kill A Mockingbird	Harper Lee	Fiction	1960
+19	A Book of Abstract Algebra	Charles C. Pinter	Maths	1982
+20	An Introduction to Probability Theory and Its Applications	William Feller	Maths	1950
+21	Classic Set Theory, For Guided Independent Study	D. C. Goldrei	Maths	1996
+22	Elementary Algebra	George Chrystal	Maths	1886
+23	First Order Logic	Raymond M. Smullyan	Maths	1968
+24	How To Prove It, A Structured Approach	Daniel J. Velleman	Maths	1994
+25	Introduction to Algorithms	Cormen, Leiserson, Rivest, Stein	Maths	1990
+26	Principia Mathematica	Whitehead, Russell	Maths	1910
+27	Proofs, A Long-Form Mathematics Textbook	Jay Cummings	Maths	2020
+28	A Briefe Introduction to the Skill of Song	William Bathe	Music	1584
+29	A Modern Method For Guitar	William Leavitt	Music	1966
+30	Chord Chemistry	Ted Greene	Music	1971
+31	Counterpoint in Composition	Schachter, Salzer	Music	1969
+32	Harmonic Mechanisms For Guitar	George Van Eps	Music	1980
+33	Thesaurus of Scales and Melodic Patterns	Nicolas Slonimsky	Music	1947
+34	Métamorphoses	Ovid	Myth and Theology	8
+35	The Holy Bible	God	Myth and Theology	1
+36	Introduction to Operations Research	Hillier, Lieberman	Operations Research	1957
+37	Gorgias, Rhetoric	Plato, Aristotle	Philosophy	-400
+38	Lectures on The Philosophy of Mathematics	Joel David Hamkins	Philosophy	2021
+39	Meditations on First Philosophy	René Descartes	Philosophy	1641
+40	Nicomachean Ethics	Aristotle	Philosophy	-400
+41	Novum Organum	Francis Bacon	Philosophy	1620
+42	The Organon	Aristotle	Philosophy	-400
+43	Tractatus Logico-Philosophicus	Ludwig Wittgenstein	Philosophy	1921
+44	Principia	Isaac Newton	Physics and Engineering	1687
+45	Deep Work	Cal Newport	Productivity	2016
+46	How to Become a Straight-A Student	Cal Newport	Productivity	2006
+47	So Good They Can't Ignore You	Cal Newport	Productivity	2012
+48	The 3 Secrets to Effective Time Investment	Elizabeth Grace Saunders	Productivity	2013
+49	Burnout Immunity	Kandi Wiens	Psychology	2020
+50	Influence	Robert Cialdini	Psychology	1984
+51	Psycho-Cybernetics	Maxwell Maltz	Psychology	1960
+52	The 48 Laws of Power	Robert Greene	Psychology	1998
+53	Alice Au Pays Du Langage	Marina Yaguello	Linguistics	1981
+54	Introduction to Psycholinguistics	Matthew J. Traxler	Linguistics	2011
+55	Cours de Linguistique Générale	Ferdinand de Saussure	Linguistics	1916
+56	Curl-Noise for Procedural Fluid Flow	Bridson, Hourihan, Nordenstam	Academic	2007
+57	Entre Les Murs	François Bégaudeau	Society	2006

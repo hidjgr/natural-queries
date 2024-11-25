@@ -1,0 +1,42 @@
+# Info
+## g.describe
+## g.dtypes
+## g.groups
+## g.indices
+## g.get_group
+## g.keys
+## g.level
+## g.ndim
+## g.ngroups
+
+# Meta
+## g.agg
+## g.aggregate
+
+# Result not DF
+## g.ewm
+## g.expanding
+## g.rolling # arg
+
+# Function arg
+## g.apply
+## g.transform
+## g.filter
+## g.pipe
+
+# Graphical
+## g.hist
+## g.plot
+## g.boxplot
+
+# Internal
+## g.grouper
+
+# DF arg
+## g.corrwith
+
+# Non-DF arg
+## g.fillna
+## g.take
+## g.nth
+## g.resample
