@@ -49,7 +49,6 @@ class FilterNode(FilterExp):
         return f(qf)
 
 
-
 class FilterLeaf(FilterExp):
 
     def __init__(self, function: str, column: str, *args: tuple[data_t]):
@@ -75,6 +74,11 @@ class FilterLeaf(FilterExp):
 
     def eval(self, qf: QLFrame) -> DataFrame:
         f = self.functions[self.function]
+        def a(x,y):
+            return x & (qf.select(self.column) >  y)
+        trues = qf.select(self.column)==qf.select(self.column) 
+        b = lambda qf: reduce(a, self.args, trues.array)
+        b(qf)
         return f(qf)
 
 
@@ -87,24 +91,85 @@ class QLFrame(QLFrame):
     def __repr__(self) -> str:
         return repr(self.df)
 
-    def align(self, o_keys):
+    def align(self, o_keys) -> DataFrame:
         if self.keys:
             return self.df.set_index(list(set(self.keys+o_keys)))
         return self.df.set_index(list(o_keys))
 
+    def _comp(self, o, comp):
+        comparisons = {
+                "eq": lambda x,y: x.eq(y),
+                "ne": lambda x,y: x.ne(y),
+                "gt": lambda x,y: x.gt(y),
+                "ge": lambda x,y: x.ge(y),
+                "lt": lambda x,y: x.lt(y),
+                "le": lambda x,y: x.le(y),
+                }
+        if self.df.shape[0] == o.df.shape[0]:
+            return comparisons[comp](self.df,o.df)[self.df.columns.difference(self.dims)].all(axis=1)
+        return comparisons[comp](self.align(o.keys),o.align(self.keys))[self.df.columns.difference(self.dims)].all(axis=1)
+
+    def _op(self, o, op):
+        operations = {
+                "add": lambda x,y: x+y,
+                "sub": lambda x,y: x-y,
+                "mul": lambda x,y: x*y,
+                "truediv": lambda x,y: x/y,
+                "floordiv": lambda x,y: x//y,
+                "pow": lambda x,y: x**y
+                }
+        return operations[op](self.align(o.keys),o.align(self.keys))[self.df.columns.difference(self.dims)]
+
     def __eq__(self, o: data_t):
         if isinstance(o, QLFrame):
-            return self.align(o.keys) == o.align(self.keys)
+            return self._comp(o, "eq")
+
+    def __ne__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._comp(o, "ne")
 
     def __gt__(self, o: data_t):
         if isinstance(o, QLFrame):
-            x = self.align(o.keys)
-            y = o.align(self.keys)
-            breakpoint()
-            return self.align(o.keys) > o.align(self.keys)
+            return self._comp(o, "gt")
+
+    def __ge__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._comp(o, "ge")
+
+    def __lt__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._comp(o, "lt")
+
+    def __le__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._comp(o, "le")
 
     def __add__(self, o: data_t):
-        self.df + o
+        if isinstance(o, QLFrame):
+            return self._op(o, "add")
+
+    def __sub__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._op(o, "sub")
+
+    def __mul__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._op(o, "mul")
+
+    def __truediv__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._op(o, "truediv")
+
+    def __floordiv__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._op(o, "floordiv")
+
+    def __pow__(self, o: data_t):
+        if isinstance(o, QLFrame):
+            return self._op(o, "pow")
+
+    def __neg__(self):
+        return QLFrame()
 
     def group(self, by:str|list[str]|tuple[str]|dict[str,str], agg:str) -> QLFrame:
         aggtypes = {
@@ -127,37 +192,42 @@ class QLFrame(QLFrame):
             seen = set()
             seen_add = seen.add
             return [x for x in seq if not (x in seen or seen_add(x))]
-        
-        groupcols = uniq(self.keys+by)
 
-        dropcols = []
+        def filter_from_set(l, s):
+            return [i for i in l if i in s]
+
+        keepcols = self.df.columns
+        newdims = uniq(self.dims+by)
+        newkeys = uniq(self.keys+by)
         if agg in aggtypes["numeric"]:
-            for k,t in self.df.dtypes.items():
-                if (((k not in groupcols) and (t not in ["int", "float"]))
-                    or ((k in self.dims) and (k not in by))):
-                    dropcols.append(k)
+            keepcols = filter_from_set(keepcols,
+                        set(by) | ((set(self.keys)
+                                    | set(i for i,t in self.df.dtypes.items()
+                                          if t in ["int", "float"]))
+                                   - set(self.dims)))
+            newdims = by
+            newkeys = by
 
-        self.keys = tuple(set(self.keys) | set(by))
-        
-        return QLFrame(self.df
-                       .drop(dropcols, axis=1)
-                       .groupby(by=groupcols)
-                       .agg(agg)
-                       .reset_index(), self.dims, self.keys)
+        return QLFrame(self.df[keepcols].groupby(by=list(by)).agg(agg).reset_index(),
+                       newdims, newkeys)
 
     def filter(self, arg_exp):
         exp = FilterExp.parse_exp(arg_exp)
         return QLFrame(self.df[exp.eval(self)], self.dims, self.keys)
 
     def op(self, op, other):
-        # return op df
-        pass
+        return self._op(other, op)
 
     def join(self, other):
         # return joined
         pass
 
     def select(self, columns):
+        if isinstance(columns, str) or not hasattr(columns, '__iter__'):
+            columns = [columns]
+        else:
+            columns = list(columns)
+
         return QLFrame(self.df[columns], self.dims, self.keys)
 
     def drop(self, columns):
@@ -184,5 +254,13 @@ g = checkouts.group(["Year"], "mean")
 
 c = checkouts
 
-c > g
-g > c
+filt = c.filter(["gt","Checkouts",g,g])
+
+# ┌main 256
+# └┬filter 215
+#  └┬eval 82
+#   └┬lambda 81
+#    └┬return 79
+#     └┬__gt__ 134
+#      └┬_comp 111
+#       └align 98
