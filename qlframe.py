@@ -74,19 +74,21 @@ class FilterLeaf(FilterExp):
 
     def eval(self, qf: QLFrame) -> DataFrame:
         f = self.functions[self.function]
+
         def a(x,y):
             return x & (qf.select(self.column) >  y)
         trues = qf.select(self.column)==qf.select(self.column) 
+        breakpoint()
         b = lambda qf: reduce(a, self.args, trues.array)
         b(qf)
+
         return f(qf)
 
 
 class QLFrame(QLFrame):
-    def __init__(self, df: pd.DataFrame, dims=tuple(), keys=tuple()):
+    def __init__(self, df: pd.DataFrame, dims=tuple()):
         self.df = df
         self.dims = tuple(dims)
-        self.keys = tuple(keys)
 
     def __repr__(self) -> str:
         return repr(self.df)
@@ -171,6 +173,14 @@ class QLFrame(QLFrame):
     def __neg__(self):
         return QLFrame()
 
+    def _uniq(self, seq):
+        seen = set()
+        seen_add = seen.add
+        return [x for x in seq if not (x in seen or seen_add(x))]
+
+    def _filter_from_set(self, l, s):
+        return [i for i in l if i in s]
+
     def group(self, by:str|list[str]|tuple[str]|dict[str,str], agg:str) -> QLFrame:
         aggtypes = {
             "all": ["count", "all", "any", "cumcount", "first", "last",
@@ -188,32 +198,23 @@ class QLFrame(QLFrame):
         else:
             by = tuple(by)
 
-        def uniq(seq):
-            seen = set()
-            seen_add = seen.add
-            return [x for x in seq if not (x in seen or seen_add(x))]
-
-        def filter_from_set(l, s):
-            return [i for i in l if i in s]
-
         keepcols = self.df.columns
-        newdims = uniq(self.dims+by)
-        newkeys = uniq(self.keys+by)
+        newdims = self._uniq(self.dims+by)
         if agg in aggtypes["numeric"]:
-            keepcols = filter_from_set(keepcols,
-                        set(by) | ((set(self.keys)
-                                    | set(i for i,t in self.df.dtypes.items()
-                                          if t in ["int", "float"]))
-                                   - set(self.dims)))
+            numcols = set(i for i,t in self.df.dtypes.items() if t in ["int", "float"])
+            keepcols = self._filter_from_set(keepcols,
+                                       set(by) | (numcols - set(self.dims)) )
             newdims = by
-            newkeys = by
 
-        return QLFrame(self.df[keepcols].groupby(by=list(by)).agg(agg).reset_index(),
-                       newdims, newkeys)
+        return QLFrame(self.df[keepcols]
+                           .groupby(by=list(by))
+                           .agg(agg)
+                           .reset_index(),
+                       newdims)
 
     def filter(self, arg_exp):
         exp = FilterExp.parse_exp(arg_exp)
-        return QLFrame(self.df[exp.eval(self)], self.dims, self.keys)
+        return QLFrame(self.df[exp.eval(self)], self.dims)
 
     def op(self, op, other):
         return self._op(other, op)
@@ -228,7 +229,9 @@ class QLFrame(QLFrame):
         else:
             columns = list(columns)
 
-        return QLFrame(self.df[columns], self.dims, self.keys)
+        return QLFrame(self.df[columns],
+                       self._filter_from_set(columns,
+                                             set(self.dims) & set(columns)))
 
     def drop(self, columns):
 
@@ -237,7 +240,7 @@ class QLFrame(QLFrame):
         else:
             columns = tuple(columns)
 
-        return QLFrame(self.df[self.df.columns.difference(columns)], self.dims, self.keys)
+        return QLFrame(self.df[self.df.columns.difference(columns)], self.dims)
 
 
 books = QLFrame(pd.read_csv("books.csv", sep="	"),
