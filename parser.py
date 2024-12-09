@@ -7,18 +7,6 @@ tokens = [
     'EQUALS', 'COMMA', 'DOT', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET'
 ]
 
-# df.filter(exp=[...]).group(by="", agg="").op(df2.filter())
-# DF.METHOD(KWARG).METHOD(KWARGS)
-
-# Reserved keywords (method names)
-#reserved = {
-#    'group': 'GROUP',
-#    'filter': 'FILTER',
-#    'join': 'JOIN',
-#    'op' : 'OP'
-#}
-#tokens += list(reserved.values())
-
 # Token definitions
 t_EQUALS = r'='
 t_COMMA = r','
