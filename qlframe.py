@@ -2,22 +2,16 @@ import pandas as pd
 from qltypes import *
 from functools import reduce
 
-def brk(sol, x, y, qc, com, *args, **kwargs):
-    print(tuple(kwargs.values()))
-    breakpoint()
-    return sol
-
-
 class FilterExp:
 
-    def eval(self, qf: QLFrame): pass
+    def eval(self, qf: QLFrame) -> DataFrame: pass
 
     @staticmethod
-    def _isnode(exp: list):
+    def _isnode(exp: list) -> bool:
         return ((len(exp) >= 2) and (exp[0] in ["not", "and", "or"]))
 
     @staticmethod
-    def _isleaf(exp: list):
+    def _isleaf(exp: list) -> bool:
         return ((len(exp) >= 3) and
                 (exp[0] in ["eq", "ne", "in", "gt", "ge", "lt", "le"]))
 
@@ -75,7 +69,6 @@ class FilterLeaf(FilterExp):
 
         comp_red_t = {c: "or" if c in ("ne", "in") else "and" for c in comp}
 
-        #self.filter = lambda qf: comp_red[comp_red_t[function]](qf.select(column))
         self.filter = lambda qf: comp_red[comp_red_t[function]](qf)
 
     def __repr__(self) -> str:
@@ -85,15 +78,6 @@ class FilterLeaf(FilterExp):
         return f'({self.column} <{self.function}> {", ".join(map(str,self.args))})'
 
     def eval(self, qf: QLFrame) -> DataFrame:
-        #f = self.functions[self.function]
-
-        #def a(x,y):
-        #    return x & (qf.select(self.column) >  y)
-        #trues = qf.select(self.column)==qf.select(self.column) 
-        #breakpoint()
-        #b = lambda qf: reduce(a, self.args, trues.array)
-        #b(qf)
-
         return self.filter(qf)
 
 
@@ -105,17 +89,28 @@ class QLFrame(QLFrame):
     def __repr__(self) -> str:
         return repr(self.df)
 
+    def _uniq(self, seq):
+        seen = set()
+        seen_add = seen.add
+        return [x for x in seq if not (x in seen or seen_add(x))]
+
+    def _filter_from_set(self, l, s):
+        return [i for i in l if i in s]
+
     def align(self, o) -> DataFrame:
         if (not self.dims) or (not o.dims):
             return self, o
         return self.df.set_index(list(self.dims)).align(o.df.set_index(list(o.dims)))
 
-    def _comp(self, o, comp):
-        return comp(*self.align(o))[self.df.columns.difference(self.dims)].all(axis=1)
-
-    def _dim_splice(self, fun):
+    def _dim_splice(self, fun) -> DataFrame:
         return pd.concat([self.df[list(self.dims)],
                    fun(self.df[self.df.columns.difference(self.dims)])], axis=1)
+
+    def _comp(self, o, comp):
+        if isinstance(o, QLFrame):
+            return comp(*self.align(o))[self.df.columns.difference(self.dims)].all(axis=1)
+        else:
+            return self._dim_splice(lambda x: comp(x, o)).set_index(list(self.dims)).all(axis=1)
 
     def _op(self, o, fun):
         if isinstance(o, QLFrame):
@@ -187,14 +182,6 @@ class QLFrame(QLFrame):
     def __neg__(self):
         return self._dim_splice(lambda x: -x)
 
-    def _uniq(self, seq):
-        seen = set()
-        seen_add = seen.add
-        return [x for x in seq if not (x in seen or seen_add(x))]
-
-    def _filter_from_set(self, l, s):
-        return [i for i in l if i in s]
-
     def group(self, by:str|list[str]|tuple[str]|dict[str,str], agg:str) -> QLFrame:
         aggtypes = {
             "all": ["count", "all", "any", "cumcount", "first", "last",
@@ -226,14 +213,14 @@ class QLFrame(QLFrame):
                            .reset_index(),
                        newdims)
 
-    def filter(self, arg_exp):
+    def filter(self, arg_exp) -> QLFrame:
         exp = FilterExp.parse_exp(arg_exp)
         return QLFrame(self.df[exp.eval(self).values], self.dims)
 
-    def op(self, op, other):
+    def op(self, op, other) -> QLFrame:
         return self._op(other, op)
 
-    def join(self, other):
+    def join(self, other) -> QLFrame:
         newdims = self._filter_from_set(
                 self._uniq(self.dims+other.dims),
                 set(self.dims) & set(other.dims))
@@ -241,9 +228,9 @@ class QLFrame(QLFrame):
         return QLFrame(self.df.merge(other.df, on=newdims), newdims)
 
     def visual_join(self, other):
-        return pd.concat
+        return pd.concat([self.df, other.df], axis=1)
 
-    def select(self, columns):
+    def select(self, columns) -> QLFrame:
         if isinstance(columns, str) or not hasattr(columns, '__iter__'):
             columns = [columns]
         else:
@@ -253,14 +240,15 @@ class QLFrame(QLFrame):
                        self._filter_from_set(columns,
                                              set(self.dims) & set(columns)))
 
-    def drop(self, columns):
-
+    def drop(self, columns) -> QLFrame:
         if isinstance(columns, str) or not hasattr(columns, '__iter__'):
             columns = (columns,)
         else:
             columns = tuple(columns)
 
-        return QLFrame(self.df[self.df.columns.difference(columns)], self.dims)
+        return QLFrame(self.df[self.df.columns.difference(columns)],
+                       self._filter_from_set(self.dims,
+                                             set(self.df.columns.difference(columns))))
 
 
 books = QLFrame(pd.read_csv("books.csv", sep="	"),
