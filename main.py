@@ -1,24 +1,19 @@
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from models import HumanLLM
-import pandas as pd
 from parser import parser
+from data import from_local_csv
 
-## Load the Excel data
-#df = pd.read_excel("file_example_XLS_1000.xls")
-#
-## Initialize your custom LLM
-#human_llm = HumanLLM()
-#
-## Create an agent using the human-in-the-loop LLM
-#agent = create_pandas_dataframe_agent(human_llm, df, verbose=True)
-#
-## Run a sample prompt
-#response = agent.run("What is the total sales for each product?")
-#print(response)
+# df = pd.read_excel("file_example_XLS_1000.xls")
 
-# Sample input for testing
-input_string = 'group.group(by="col1", agg="sum").filter(exp=["and", ["not", ["ne", "col2", 10]], ["eq", "col1", 4, df, 5]]).join(other=df.group(by="co l2", agg="avg"))'
+# Import data as a map
+frames = from_local_csv()
+
+# Human LLM and agent
+human_llm = HumanLLM()
+
+input_string = 'checkouts.filter(arg_exp=["and", ["in", "Year", 2022, 2023], ["not", ["and", ["gt", "Checkouts", 80], ["lt", "Checkouts", 110]]]]).group(by=["Year"], agg="mean")'
 
 # Parse the input
-result = parser.parse(input_string)
-print(result)
+frame, query = parser.parse(input_string)
+
+result = query(frames[frame])

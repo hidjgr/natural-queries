@@ -53,9 +53,9 @@ def p_expression(p):
                   | IDENTIFIER'''
 
     if len(p) == 3:
-        p[0] = lambda qlf: reduce(lambda x,y: getattr(x, y[0])(**y[1]), p[2], qlf)
+        p[0] = (p[1], lambda qlf: reduce(lambda x,y: getattr(x, y[0])(**y[1]), p[2], qlf))
     else:
-        p[0] = lambda qlf: qlf
+        p[0] = (p[1], lambda qlf: qlf)
 
 def p_functions(p):
     '''functions : DOT IDENTIFIER LPAREN kwargs RPAREN functions

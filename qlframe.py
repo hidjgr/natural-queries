@@ -251,16 +251,3 @@ class QLFrame(QLFrame):
         return QLFrame(self.df[self.df.columns.difference(columns)],
                        self._filter_from_set(self.dims,
                                              set(self.df.columns.difference(columns))))
-
-books = QLFrame(pd.read_csv("books.csv", sep="	"),
-                dims=["BookID", "Title", "Author", "Genre", "Year"])
-checkouts = QLFrame(pd.read_csv("checkouts.csv", sep="	"),
-                    dims=["Year", "BookID"])
-
-exp = ["and", ["in", "Year", 2022, 2023], ["not", ["and", ["gt", "Checkouts", 80], ["lt", "Checkouts", 110]]]]
-
-g = checkouts.group(["Year"], "mean")
-
-c = checkouts
-
-filt = c.filter(exp)
