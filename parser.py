@@ -1,10 +1,18 @@
 import ply.lex as lex
 import ply.yacc as yacc
+from functools import reduce
 
-# Lexer setup with tokens and reserved words
+## Lexer
+# Tokens
 tokens = [
-    'IDENTIFIER', 'NUMBER', 'STRING',
-    'EQUALS', 'COMMA', 'DOT', 'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET'
+    'IDENTIFIER', # dataframe name, function call, kwarg name
+    'NUMBER', # kwarg value
+    'STRING', # kwarg value
+    'DOT', # function calls
+    'LPAREN', 'RPAREN', # function calls
+    'EQUALS', # kwargs
+    'COMMA', # kwarg sep and list sep
+    'LBRACKET', 'RBRACKET'
 ]
 
 # Token definitions
@@ -15,11 +23,7 @@ t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_LBRACKET = r'\['
 t_RBRACKET = r'\]'
-
-def t_IDENTIFIER(t):
-    r'[a-zA-Z_][a-zA-Z0-9_]*'
-    #t.type = reserved.get(t.value, 'IDENTIFIER')
-    return t
+t_IDENTIFIER = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
 def t_STRING(t):
     r'\".*?\"|\'.*?\''
@@ -27,8 +31,8 @@ def t_STRING(t):
     return t
 
 def t_NUMBER(t):
-    r'\d+'
-    t.value = int(t.value)
+    r"[-+]?(?:\d*\.*\d+)"
+    t.value = int(t.value) if t.value.isnumeric() else float(t.value)
     return t
 
 # Ignored characters
@@ -42,34 +46,109 @@ def t_error(t):
 # Build the lexer
 lexer = lex.lex()
 
-# Parser setup with detailed error handling
-# Rules:
-# exp
-#  → iden
-#  | iden calls
-#          → DOT call
-#          | DOT call calls
-#                 → GROUP RPAREN group_kwargs LPAREN
-#                 | FILTER RPAREN filter_kwargs LPAREN
-#                 | JOIN RPAREN join_kwargs LPAREN
-#                 | OP RPAREN op_kwargs LPAREN
 
-# Define parsing rules
+## Parser
 def p_expression(p):
-    '''expression : IDENTIFIER transformations
+    '''expression : IDENTIFIER functions
                   | IDENTIFIER'''
 
-def p_transformations(p):
-    '''transformations : DOT IDENTIFIER LPAREN kwargs RPAREN transformations
-                       | DOT IDENTIFIER LPAREN kwargs RPAREN'''
+    if len(p) == 3:
+        p[0] = lambda qlf: reduce(lambda x,y: getattr(x, y[0])(**y[1]), p[2], qlf)
+    else:
+        p[0] = lambda qlf: qlf
+
+def p_functions(p):
+    '''functions : DOT IDENTIFIER LPAREN kwargs RPAREN functions
+                 | DOT IDENTIFIER LPAREN kwargs RPAREN'''
+
+    if len(p) == 7:
+        p[0] = [(p[2], p[4])] + p[6]
+    else:
+        p[0] = [(p[2], p[4])]
 
 def p_kwargs(p):
-    '''kwargs : kwarg COMMA kwargs
-              | kwarg'''
+    '''kwargs : IDENTIFIER EQUALS kwarg_arg COMMA kwargs
+              | IDENTIFIER EQUALS kwarg_arg'''
+
+    if len(p) == 6:
+        p[0] = {p[1]: p[3]} | p[5]
+    else:
+        p[0] = {p[1]: p[3]}
+
 
 def p_kwarg(p):
-    '''kwarg : IDENTIFIER EQUALS NUMBER
-             | IDENTIFIER EQUALS STRING'''
+    '''kwarg_arg : STRING
+                 | NUMBER
+                 | string_list
+                 | expression
+                 | filter_expression'''
 
-# Build the parser
+    p[0] = p[1]
+
+def p_string_list(p):
+    '''string_list : LBRACKET strings RBRACKET'''
+
+    p[0] = p[2]
+
+
+def p_strings(p):
+    '''strings : STRING COMMA strings
+               | STRING'''
+
+    if len(p) == 4:
+        p[0] = [p[1]] + p[3]
+    else:
+        p[0] = [p[1]]
+
+
+def p_filter_expressions(p):
+    '''filter_expressions : filter_expression COMMA filter_expressions
+                          | filter_expression'''
+
+    if len(p) == 4:
+        p[0] = [p[1]] + p[3]
+    else:
+        p[0] = [p[1]]
+
+
+def p_filter_expression(p):
+    '''filter_expression : filter_node
+                         | filter_leaf'''
+
+    p[0] = p[1]
+
+
+def p_filter_node(p):
+    '''filter_node : LBRACKET STRING COMMA filter_expressions RBRACKET'''
+
+    p[0] = [p[2], *p[4]]
+
+
+def p_filter_leaf(p):
+    '''filter_leaf : LBRACKET STRING COMMA STRING COMMA filter_args RBRACKET'''
+
+    p[0] = [p[2],p[4],*p[6]]
+
+
+def p_filter_args(p):
+    '''filter_args : filter_arg COMMA filter_args
+                   | filter_arg'''
+    
+    if len(p) == 4:
+        p[0] = [p[1]] + p[3]
+    else:
+        p[0] = [p[1]]
+
+
+def p_filter_arg(p):
+    '''filter_arg : STRING
+                  | NUMBER
+                  | expression'''
+
+    p[0] = p[1]
+
+
+def p_error(p):
+    print("Error de sintaxis :DDDD")
+
 parser = yacc.yacc()

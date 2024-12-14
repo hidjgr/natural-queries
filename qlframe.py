@@ -32,10 +32,12 @@ class FilterNode(FilterExp):
         self.function: str = function
         self.args: tuple[FilterExp] = args
 
+        trues = lambda c: (c==c).values
+
         self.functions = {
-                "not": lambda qf: ~self.args.eval(),
-                "and": lambda qf: reduce(lambda x,y: x & y, map(lambda x: x.eval(qf), self.args), qf.df[qf.df.columns[0]]==qf.df[qf.df.columns[0]]),
-                "or": lambda qf: reduce(lambda x,y: x | y, map(lambda x: x.eval(qf), self.args), qf.df[qf.df.columns[0]]!=qf.df[qf.df.columns[0]]),
+                "not": lambda qf: ~self.args[0].eval(qf),
+                "and": lambda qf: reduce(lambda x,y: x & y, map(lambda x: x.eval(qf), self.args), trues(qf.df[qf.df.columns[0]])),
+                "or": lambda qf: reduce(lambda x,y: x | y, map(lambda x: x.eval(qf), self.args), ~trues(qf.df[qf.df.columns[0]])),
                 }
 
     def __repr__(self):
@@ -57,7 +59,7 @@ class FilterLeaf(FilterExp):
         self.args = args
 
         comp = {
-            "eq": lambda x,y: x == y, "ne": lambda x,y: x != y, "in": lambda x,y: x == y,                
+            "eq": lambda x,y: x == y, "ne": lambda x,y: x != y, "in": lambda x,y: x == y,
             "gt": lambda x,y: x > y, "ge": lambda x,y: x >= y,
             "lt": lambda x,y: x < y, "le": lambda x,y: x <= y
                 }
@@ -69,7 +71,7 @@ class FilterLeaf(FilterExp):
 
         comp_red_t = {c: "or" if c in ("ne", "in") else "and" for c in comp}
 
-        self.filter = lambda qf: comp_red[comp_red_t[function]](qf)
+        self.filter = lambda qf: comp_red[comp_red_t[function]](qf.df[column])
 
     def __repr__(self) -> str:
         return f'({self.column} <{self.function}> {", ".join(map(str,self.args))})'
@@ -97,7 +99,7 @@ class QLFrame(QLFrame):
     def _filter_from_set(self, l, s):
         return [i for i in l if i in s]
 
-    def align(self, o) -> DataFrame:
+    def _align(self, o) -> DataFrame:
         if (not self.dims) or (not o.dims):
             return self, o
         return self.df.set_index(list(self.dims)).align(o.df.set_index(list(o.dims)))
@@ -108,13 +110,13 @@ class QLFrame(QLFrame):
 
     def _comp(self, o, comp):
         if isinstance(o, QLFrame):
-            return comp(*self.align(o))[self.df.columns.difference(self.dims)].all(axis=1)
+            return comp(*self._align(o))[self.df.columns.difference(self.dims)].all(axis=1)
         else:
             return self._dim_splice(lambda x: comp(x, o)).set_index(list(self.dims)).all(axis=1)
 
     def _op(self, o, fun):
         if isinstance(o, QLFrame):
-            res = fun(*self.align(o))
+            res = fun(*self._align(o))
             return QLFrame(res.reset_index(), tuple(res.index.names))
         else:
             return QLFrame(self._dim_splice(lambda x: fun(x, o)), self.dims)
@@ -250,16 +252,15 @@ class QLFrame(QLFrame):
                        self._filter_from_set(self.dims,
                                              set(self.df.columns.difference(columns))))
 
-
 books = QLFrame(pd.read_csv("books.csv", sep="	"),
                 dims=["BookID", "Title", "Author", "Genre", "Year"])
 checkouts = QLFrame(pd.read_csv("checkouts.csv", sep="	"),
                     dims=["Year", "BookID"])
 
-exp = ["and", ["in", "Year", 2022, 2023], ["and", ["gt", "Checkouts", 80], ["lt", "Checkouts", 110]]]
+exp = ["and", ["in", "Year", 2022, 2023], ["not", ["and", ["gt", "Checkouts", 80], ["lt", "Checkouts", 110]]]]
 
 g = checkouts.group(["Year"], "mean")
 
 c = checkouts
 
-filt = c.filter(["gt","Checkouts",g,g])
+filt = c.filter(exp)

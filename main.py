@@ -17,9 +17,8 @@ from parser import parser
 #print(response)
 
 # Sample input for testing
-input_string = 'group.group(by="col1", agg="sum").filter(exp=["eq", "col1", 5]).join(group(by="co l2", agg="avg"))'
+input_string = 'group.group(by="col1", agg="sum").filter(exp=["and", ["not", ["ne", "col2", 10]], ["eq", "col1", 4, df, 5]]).join(other=df.group(by="co l2", agg="avg"))'
 
 # Parse the input
 result = parser.parse(input_string)
 print(result)
-
