@@ -1,5 +1,5 @@
 from langchain_experimental.agents import create_pandas_dataframe_agent
-from models import HumanLLM
+from models import HumanLLM, TestLLM
 from parser import parser
 from data import from_local_csv
 
@@ -9,11 +9,13 @@ from data import from_local_csv
 frames = from_local_csv()
 
 # Human LLM and agent
-human_llm = HumanLLM()
+# llm = HumanLLM()
+llm = TestLLM()
 
-input_string = 'checkouts.filter(arg_exp=["and", ["in", "Year", 2022, 2023], ["not", ["and", ["gt", "Checkouts", 80], ["lt", "Checkouts", 110]]]]).group(by=["Year"], agg="mean")'
+response = llm.invoke(
+        "Yearly average of checkouts between 80 and 110 for 2022 and 2023")
 
 # Parse the input
-frame, query = parser.parse(input_string)
+frame, query = parser.parse(response)
 
 result = query(frames[frame])
